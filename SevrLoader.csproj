@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net48</TargetFramework>
+        <PlatformTarget>x64</PlatformTarget>
+        <LangVersion>latest</LangVersion>
+        <AssemblyName>SevrLoader</AssemblyName>
+        <RootNamespace>SevrLoader</RootNamespace>
+        <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <GameBinPath Condition="'$(GameBinPath)' == ''">$(SEVR_GAME_BIN)</GameBinPath>
+    </PropertyGroup>
+
+    <Target Name="CheckGameReferences" BeforeTargets="ResolveReferences">
+        <Error Condition="'$(GameBinPath)' == ''"
+               Text="GameBinPath is not set. Pass -p:GameBinPath=...\SpaceEngineers\Bin64 or set the SEVR_GAME_BIN environment variable." />
+        <Error Condition="!Exists('$(GameBinPath)\SpaceEngineers.exe')"
+               Text="'$(GameBinPath)' does not look like a Bin64 folder: SpaceEngineers.exe was not found there." />
+    </Target>
+
+    <ItemGroup>
+        <Reference Include="SpaceEngineers">
+            <HintPath>$(GameBinPath)\SpaceEngineers.exe</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="VRage">
+            <HintPath>$(GameBinPath)\VRage.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="VRage.Library">
+            <HintPath>$(GameBinPath)\VRage.Library.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Update="steam_appid.txt">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
+
+</Project>
