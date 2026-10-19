@@ -2,9 +2,11 @@
 
 Oct 18, 2026 · @Mal
 
-**We found nothing harmful.** Two AI reviewer agents went through the source code of [SpaceEngineersVR](https://github.com/ColbyJack1134/SpaceEngineersVR) separately, without seeing each other's conclusions, and agreed: the plugin has no way to reach the internet, never launches other programs, and only ever writes inside Space Engineers' own save folder. Version checked: **v1.1.1**, commit `5f039a9`.
+**We found nothing harmful.** Two AI reviewer agents went through the source code of [SpaceEngineersVR](https://github.com/ColbyJack1134/SpaceEngineersVR) separately, without seeing each other's conclusions, and agreed: the plugin has no way to reach the internet, never launches other programs, and only ever writes inside Space Engineers' own save folder. Version checked: **v1.1.5**, commit `0179423`.
 
-**The exact code reviewed:** [SpaceEngineersVR at commit 5f039a9](https://github.com/ColbyJack1134/SpaceEngineersVR/tree/5f039a9fbe50f02e4bcf5f6141ee5c41fa8efe4c). That link opens the tree as it stood when this was written, not the current one. If you are reading the latest code instead, the findings below may not apply to it.
+**The exact code reviewed:** [SpaceEngineersVR at commit 0179423](https://github.com/ColbyJack1134/SpaceEngineersVR/tree/01794239d753b3b28e223dbaf09a8925d3682415) (tag `v1.1.5`). That link opens the tree as it stood when this was written, not the current one. If you are reading the latest code instead, the findings below may not apply to it.
+
+**This is the second review.** The first covered v1.1.1. Every check here was run again from scratch against v1.1.5, and the mechanical results came back identical: still no networking code of its own, still the same 17 calls into Windows, still no code loaded at runtime. Two new features do change what is worth knowing, and both are covered below. The plugin now offers an API that other Workshop mods can read, and it can send your VR pose to programmable blocks.
 
 ## What we checked
 
@@ -38,6 +40,8 @@ It does have real powers, because a VR plugin needs them. Here is each one, what
 | Mirror your desktop into VR | So you can see your monitor without taking the headset off | The capture is allocated on the graphics card with no CPU read access, and nothing in the plugin copies it back into memory, writes it to disk or sends it anywhere. See the privacy note below for what is captured |
 | Load the SteamVR driver file | Required to talk to your headset | It gives Windows the complete exact path to the file in its own folder, so it cannot be tricked into picking up a file of the same name from somewhere else. Anyone who can write into the plugin's own folder could still replace it, so install from the official source |
 | Send data to other players | Shows your VR arm and head movements to people in multiplayer | See below |
+| Let other Workshop mods read your VR pose | So mods can make their own buttons and tools work in VR | Read-only, and only your headset position, hand positions and fingertip. A mod receives plain numbers and nothing it could use to reach your files or the network, so it gains no power it did not already have |
+| Send your VR pose to programmable blocks | So in-game scripts can drive VR arms and custom cockpit controls | Only blocks you have renamed to contain `[SEVR]`, only on the ship you are piloting, and only ones you already have access to. See the privacy note below |
 | Write files | Saves your settings, generated VR gunsights and shader files | Everything goes in `%AppData%\SpaceEngineers`, the game's normal save folder. Nothing is written into the game install or anywhere else on your PC |
 
 ### The multiplayer side
@@ -58,6 +62,16 @@ It also matters that the mirror is drawn into the game's own picture. That means
 
 None of this sends anything anywhere. It is purely about what ends up on screen, and in anything capturing your screen.
 
+### Privacy: your body movements are now readable inside the game
+
+Two features added since v1.1.1 let other code in the game see how you are moving. Neither sends anything out of your PC, and neither can touch your files, but both are worth knowing about.
+
+**Workshop mods can ask for your head and hand positions.** If a mod asks, the plugin hands it your headset position, your hand positions and your fingertip position. This is what lets a mod's own buttons work when you reach out in VR. What the mod gets is a handful of numbers. There is nothing in that exchange it could use to read your disk or reach the network, and Workshop mods are already fenced in by the game itself.
+
+**Programmable blocks named `[SEVR]` are sent your posture, and this is switched on by default.** If you pilot a ship containing a programmable block whose name includes `[SEVR]`, the plugin sends that block's script your head, hand and finger positions roughly twenty times a second. The script sees your posture relative to the seat, not where you are in the world.
+
+It is worth being clear about what that means in multiplayer: if you sit in someone else's ship and they have a programmable block named `[SEVR]`, their script receives your body movements. That is exactly what the feature is for, it only works on a block you already have access to, and the script can do nothing to your PC with it. If you would rather it did not happen at all, switch off the programmable block data setting in the VR settings.
+
 ### It rewrites parts of the game while it runs
 
 All Space Engineers plugins do this, and it is the only way a mod like this can work, but it is worth understanding what you are agreeing to.
@@ -76,13 +90,13 @@ Neither of these is a sign of anything bad. Both are worth understanding before 
 
 **2. The headset driver file is not covered.** The plugin needs `openvr_api.dll` to talk to SteamVR. That file is Valve's, not the author's, and it is not in the source code we reviewed, so we cannot say anything about the copy that ships in the ZIP. In practice it is the standard Valve file. If you want to be thorough, compare it against the official copy from Valve's OpenVR release.
 
-**For people building from source**, there is a third item: the project file switches on a built-in test harness by default. It is harmless and switched off unless you deliberately set special environment variables, but it is extra code you do not need. Building with `-p:DefineConstants=""` leaves it out.
+**For people building from source**, there is a third item: the project file switches on a built-in test harness by default. It is harmless and switched off unless you deliberately set special environment variables, but it is extra code you do not need, and as of v1.1.5 it also contains code that compiles a programmable block script, which is one more reason to leave it out. Building with `-p:DefineConstants=""` leaves it out.
 
 ## What this review does not cover
 
 No code review catches everything, and you should know where the edges are rather than treating this as a clean bill of health for all time.
 
-- **Only this version.** Everything here applies to v1.1.1, commit `5f039a9`. A later update could add anything. The check has to be repeated.
+- **Only this version.** Everything here applies to v1.1.5, commit `0179423`. A later update could add anything. The check has to be repeated.
 - **Not the ZIP, and not the Valve driver file.** Covered above.
 - **Deliberately hidden flaws.** We were looking for a mod author doing something harmful, and we would have found it. We were not doing the kind of deep binary analysis that would catch a sophisticated attacker who planted a subtle memory-corruption bug designed to look like an innocent mistake. That level of attack is not realistic for a game mod, but it is not something we can rule out.
 - **Nothing was run.** This review is reading, not testing. Nobody installed it in a sandbox and watched what it actually did.
@@ -96,7 +110,7 @@ The single most useful check, if the plugin ever worries you, is whether it can 
 ```
 git clone https://github.com/ColbyJack1134/SpaceEngineersVR
 cd SpaceEngineersVR
-git checkout 5f039a9
+git checkout 0179423
 
 # 1. standard networking and process-launching classes
 grep -rn --include="*.cs" -E "HttpClient|WebClient|WebRequest|Socket|TcpClient|UdpClient|Process.Start" .
@@ -105,10 +119,10 @@ grep -rn --include="*.cs" -E "HttpClient|WebClient|WebRequest|Socket|TcpClient|U
 grep -rh --include="*.cs" -oE 'DllImport\("[^"]+"' . | sort | uniq -c
 
 # 3. the other back door: code that picks what to run while it runs
-grep -rn --include="*.cs" -E "Assembly.Load|Activator.CreateInstance|Type.GetType" SpaceEngineersVR/ | grep -v "/Diagnostics/"
+grep -rn --include="*.cs" -E "Assembly.Load|Activator.CreateInstance|Type.GetType" . | grep -vE "/(Diagnostics|SEVR.Diagnostics)/"
 ```
 
-Here is what you will actually see at commit `5f039a9`.
+Here is what you will actually see at commit `0179423`.
 
 **Check 1 prints nothing.** No standard networking or process-launching code exists.
 
@@ -128,7 +142,7 @@ One clarification, since it sounds like a contradiction: the plugin *does* send 
 When a new version comes out, you do not have to start over. Compare it against the version reviewed here and read only what changed:
 
 ```
-git diff 5f039a9..HEAD -- "*.cs" "*.csproj" "*.ps1"
+git diff 0179423..HEAD -- "*.cs" "*.csproj" "*.ps1"
 ```
 
 **A good extra step, for anyone who wants certainty rather than analysis:** install it in a throwaway virtual machine first, with a network capture running. If nothing leaves your PC while you play, that confirms the conclusion above by a completely different route.
